@@ -105,6 +105,9 @@ const outroPanels = [
   { sceneIndex: 4, xStart: 4, yStart: -58, xEnd: 2, yEnd: -42, rotate: 1.4, scaleStart: 1.1, scaleEnd: 1.26 },
 ];
 
+const OUTRO_FORWARD_DURATION_MS = 4800;
+const OUTRO_REVERSE_DURATION_MS = 1400;
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -220,14 +223,18 @@ function Walker({ progress }: { progress: number }) {
 
 function App() {
   const trackRef = useRef<HTMLElement | null>(null);
+  const rawFinalTransitionRef = useRef(0);
+  const displayFinalTransitionRef = useRef(0);
   const [progress, setProgress] = useState(0);
+  const [displayFinalTransition, setDisplayFinalTransition] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const activeIndex = clamp(Math.round(progress * (scenes.length - 1)), 0, scenes.length - 1);
   const scene = scenes[activeIndex];
   const isFinalScene = activeIndex === scenes.length - 1;
   const finalStart = (scenes.length - 2) / (scenes.length - 1);
-  const finalTransition = clamp((progress - finalStart) / (1 - finalStart), 0, 1);
+  const rawFinalTransition = clamp((progress - finalStart) / (1 - finalStart), 0, 1);
+  const finalTransition = displayFinalTransition;
   const finalEase = smooth(finalTransition);
   const finalCopyProgress = smooth(clamp((finalTransition - 0.86) / 0.1, 0, 1));
   const finalButtonProgress = smooth(clamp((finalTransition - 0.94) / 0.06, 0, 1));
@@ -237,7 +244,7 @@ function App() {
   const stackVisible = finalTransition > 0.02 && finalTransition < 0.96;
   const panelsVisible = finalTransition > 0.04 && finalTransition < 0.84;
   const showNotebook = finalTransition < 0.025;
-  const contentIndex = finalTransition > 0.01 && finalTransition < 0.9 ? scenes.length - 2 : activeIndex;
+  const contentIndex = rawFinalTransition > 0.01 && finalTransition < 0.9 ? scenes.length - 2 : activeIndex;
   const contentScene = scenes[contentIndex];
   const localProgress = progress * (scenes.length - 1) - activeIndex;
   const stackScale =
@@ -271,6 +278,39 @@ function App() {
   useEffect(() => {
     document.body.classList.toggle("menu-open", menuOpen);
   }, [menuOpen]);
+
+  useEffect(() => {
+    rawFinalTransitionRef.current = rawFinalTransition;
+  }, [rawFinalTransition]);
+
+  useEffect(() => {
+    let animationFrame = 0;
+    let previousTime = performance.now();
+
+    const tick = (time: number) => {
+      const target = rawFinalTransitionRef.current;
+      const current = displayFinalTransitionRef.current;
+      const difference = target - current;
+      const elapsed = Math.max(0, time - previousTime);
+
+      if (Math.abs(difference) > 0.001) {
+        const duration = difference > 0 ? OUTRO_FORWARD_DURATION_MS : OUTRO_REVERSE_DURATION_MS;
+        const step = Math.min(Math.abs(difference), elapsed / duration);
+        const next = current + Math.sign(difference) * step;
+        displayFinalTransitionRef.current = next;
+        setDisplayFinalTransition(next);
+      } else if (current !== target) {
+        displayFinalTransitionRef.current = target;
+        setDisplayFinalTransition(target);
+      }
+
+      previousTime = time;
+      animationFrame = window.requestAnimationFrame(tick);
+    };
+
+    animationFrame = window.requestAnimationFrame(tick);
+    return () => window.cancelAnimationFrame(animationFrame);
+  }, []);
 
   const scrollToScene = useCallback((index: number) => {
     const track = trackRef.current;
