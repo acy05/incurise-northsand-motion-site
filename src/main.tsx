@@ -90,29 +90,12 @@ const scenes: Scene[] = [
   },
 ];
 
-const paperPieces = Array.from({ length: 54 }, (_, index) => {
-  const col = index % 9;
-  const row = Math.floor(index / 9);
-  const side = index % 4;
-  const startX = side === 0 ? -50 - col * 5 : side === 1 ? 112 + col * 7 : 8 + col * 13;
-  const startY = side === 2 ? -42 - row * 8 : side === 3 ? 92 + row * 10 : 8 + row * 12;
-  const endX = 8 + col * 10.5 + (row % 2) * 2.4;
-  const endY = 18 + row * 9.6 + (col % 3) * 1.8;
-
-  return {
-    id: index,
-    startX,
-    startY,
-    endX,
-    endY,
-    startRot: -58 + ((index * 31) % 116),
-    endRot: -9 + ((index * 13) % 18),
-    width: 34 + ((index * 7) % 26),
-    height: 22 + ((index * 11) % 19),
-    delay: (index % 12) * 0.018,
-    accent: ["#f36f21", "#44b4a3", "#ff5f57", "#8e5cf7", "#f7b733"][index % 5],
-  };
-});
+const zoomFrames = [
+  { id: 1, start: 0.08, end: 0.42, fadeStart: 0.34, fadeEnd: 0.5, scaleStart: 5.4, scaleEnd: 2.3, x: -4.8, y: -2.4 },
+  { id: 2, start: 0.38, end: 0.62, fadeStart: 0.58, fadeEnd: 0.72, scaleStart: 2.8, scaleEnd: 1.42, x: 1.6, y: -1.8 },
+  { id: 3, start: 0.58, end: 0.78, fadeStart: 0.76, fadeEnd: 0.9, scaleStart: 1.44, scaleEnd: 1.07, x: 0.4, y: -0.6 },
+  { id: 4, start: 0.74, end: 0.94, fadeStart: 1, fadeEnd: 1, scaleStart: 1.06, scaleEnd: 1, x: 0, y: 0 },
+];
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -120,6 +103,10 @@ function clamp(value: number, min: number, max: number) {
 
 function smooth(value: number) {
   return value * value * (3 - 2 * value);
+}
+
+function mix(start: number, end: number, amount: number) {
+  return start + (end - start) * amount;
 }
 
 function formatDate() {
@@ -234,16 +221,23 @@ function App() {
   const finalStart = (scenes.length - 2) / (scenes.length - 1);
   const finalTransition = clamp((progress - finalStart) / (1 - finalStart), 0, 1);
   const finalEase = smooth(finalTransition);
-  const finalCopyProgress = smooth(clamp((finalTransition - 0.66) / 0.28, 0, 1));
-  const finalWordProgress = smooth(clamp((finalTransition - 0.26) / 0.54, 0, 1));
-  const paperFade = 1 - smooth(clamp((finalTransition - 0.78) / 0.2, 0, 1));
-  const finalBrandVisible = finalTransition > 0.02;
+  const finalCopyProgress = smooth(clamp((finalTransition - 0.78) / 0.18, 0, 1));
+  const finalButtonProgress = smooth(clamp((finalTransition - 0.9) / 0.1, 0, 1));
+  const finalWordProgress = smooth(clamp((finalTransition - 0.12) / 0.7, 0, 1));
+  const finalBrandVisible = finalTransition > 0.04;
   const finalizing = finalTransition > 0.02;
-  const notebookExit = clamp((finalTransition - 0.08) / 0.58, 0, 1);
-  const showNotebook = finalTransition < 0.78;
+  const stackVisible = finalTransition > 0.02 && finalTransition < 0.96;
+  const showNotebook = finalTransition < 0.025;
   const contentIndex = finalTransition > 0.01 && finalTransition < 0.9 ? scenes.length - 2 : activeIndex;
   const contentScene = scenes[contentIndex];
   const localProgress = progress * (scenes.length - 1) - activeIndex;
+  const stackScale =
+    finalTransition < 0.42
+      ? mix(1, 0.8, smooth(clamp(finalTransition / 0.42, 0, 1)))
+      : finalTransition < 0.76
+        ? mix(0.8, 0.2, clamp((finalTransition - 0.42) / 0.34, 0, 1) ** 2.4)
+        : mix(0.2, 0.0076, smooth(clamp((finalTransition - 0.76) / 0.2, 0, 1)));
+  const stackOpacity = 1 - smooth(clamp((finalTransition - 0.79) / 0.13, 0, 1));
 
   const dateText = useMemo(() => formatDate(), []);
 
@@ -289,23 +283,28 @@ function App() {
   } as React.CSSProperties;
 
   const notebookStyle = {
-    opacity: 1 - notebookExit,
-    pointerEvents: notebookExit > 0.9 ? "none" : "auto",
-    transform: `translate3d(${Math.sin(progress * Math.PI) * 2.2 - notebookExit * 30}vw, ${
-      Math.cos(progress * Math.PI * 1.4) * 1.8 + notebookExit * 9
-    }vh, 0) rotate(${-8 + progress * 12 + localProgress * 2 - notebookExit * 10}deg) scale(${1 - notebookExit * 0.14})`,
+    opacity: 1,
+    transform: `translate3d(${Math.sin(progress * Math.PI) * 2.2}vw, ${Math.cos(progress * Math.PI * 1.4) * 1.8}vh, 0) rotate(${
+      -8 + progress * 12 + localProgress * 2
+    }deg)`,
+  } as React.CSSProperties;
+
+  const outroStackStyle = {
+    "--stack-scale": stackScale,
+    "--stack-opacity": stackOpacity,
+    "--stack-softness": `${smooth(clamp((finalTransition - 0.82) / 0.12, 0, 1)) * 1.4}px`,
+    "--stack-x": `${mix(0, 3.4, smooth(finalTransition))}vw`,
+    "--stack-y": `${mix(0, -0.2, smooth(finalTransition))}vh`,
   } as React.CSSProperties;
 
   const finalBrandStyle = {
     "--final-copy-opacity": finalCopyProgress,
+    "--final-button-opacity": finalButtonProgress,
     "--final-copy-y": `${(1 - finalCopyProgress) * 18}px`,
-    "--final-word-opacity": 0.12 + finalWordProgress * 0.88,
+    "--final-word-opacity": finalWordProgress,
     "--final-word-y": `${(1 - finalWordProgress) * 20}px`,
-    "--final-word-scale": 0.9 + finalWordProgress * 0.1,
-    "--paper-fade": paperFade,
-    opacity: clamp((finalTransition - 0.02) / 0.22, 0, 1),
-    pointerEvents: finalTransition > 0.72 ? "auto" : "none",
-    transform: `translate3d(0, ${(1 - finalEase) * 32}vh, 0) scale(${0.82 + finalEase * 0.18})`,
+    opacity: clamp((finalTransition - 0.04) / 0.18, 0, 1),
+    pointerEvents: finalTransition > 0.9 ? "auto" : "none",
   } as React.CSSProperties;
 
   return (
@@ -353,37 +352,28 @@ function App() {
 
           {finalBrandVisible && (
             <article className="final-brand" style={finalBrandStyle} aria-live="polite">
-              <div className="paper-swarm" aria-hidden="true">
-                {paperPieces.map((piece) => {
-                  const settle = smooth(clamp((finalTransition - piece.delay) / 0.66, 0, 1));
-                  const x = piece.startX + (piece.endX - piece.startX) * settle;
-                  const y = piece.startY + (piece.endY - piece.startY) * settle;
-                  const rotate = piece.startRot + (piece.endRot - piece.startRot) * settle;
-                  const scale = 0.82 + settle * 0.18;
-                  const opacity = clamp((finalTransition - 0.04) / 0.16, 0, 1) * paperFade;
-
+              <div className="zoom-word-stage" aria-hidden="true">
+                {zoomFrames.map((frame) => {
+                  const appear = smooth(clamp((finalTransition - frame.start) / (frame.end - frame.start), 0, 1));
+                  const leave = frame.fadeStart >= 1 ? 0 : smooth(clamp((finalTransition - frame.fadeStart) / (frame.fadeEnd - frame.fadeStart), 0, 1));
+                  const frameProgress = smooth(clamp((finalTransition - frame.start) / (frame.end - frame.start), 0, 1));
                   return (
                     <span
-                      className="paper-piece"
-                      key={piece.id}
+                      className={`zoom-word zoom-word--${frame.id}`}
+                      key={frame.id}
                       style={
                         {
-                          "--paper-x": `${x}%`,
-                          "--paper-y": `${y}%`,
-                          "--paper-rotate": `${rotate}deg`,
-                          "--paper-scale": scale,
-                          "--paper-opacity": opacity,
-                          "--paper-width": `${piece.width}px`,
-                          "--paper-height": `${piece.height}px`,
-                          "--paper-accent": piece.accent,
+                          "--zoom-opacity": appear * (1 - leave),
+                          "--zoom-scale": mix(frame.scaleStart, frame.scaleEnd, frameProgress),
+                          "--zoom-x": `${mix(frame.x, 0, frameProgress)}vw`,
+                          "--zoom-y": `${mix(frame.y, 0, frameProgress)}vh`,
                         } as React.CSSProperties
                       }
-                    />
+                    >
+                      INCURISE
+                    </span>
                   );
                 })}
-              </div>
-              <div className="final-word" aria-hidden="true">
-                INCURISE
               </div>
               <h1 className="final-brand__title">Incurise Consulting</h1>
               <div className="final-brand__copy">
@@ -395,6 +385,21 @@ function App() {
                 <span aria-hidden="true">→</span>
               </button>
             </article>
+          )}
+
+          {stackVisible && (
+            <div className="outro-stack" style={outroStackStyle} aria-hidden="true">
+              {scenes.slice(0, 5).map((item, index) => (
+                <section className={`outro-sheet outro-sheet--${index + 1}`} key={item.id}>
+                  <span className="outro-sheet__index">0{index + 1}</span>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <small>{item.english}</small>
+                  </div>
+                  <SceneArt type={item.art} />
+                </section>
+              ))}
+            </div>
           )}
 
           {showNotebook && (
