@@ -91,10 +91,18 @@ const scenes: Scene[] = [
 ];
 
 const zoomFrames = [
-  { id: 1, start: 0.08, end: 0.42, fadeStart: 0.34, fadeEnd: 0.5, scaleStart: 5.4, scaleEnd: 2.3, x: -4.8, y: -2.4 },
-  { id: 2, start: 0.38, end: 0.62, fadeStart: 0.58, fadeEnd: 0.72, scaleStart: 2.8, scaleEnd: 1.42, x: 1.6, y: -1.8 },
-  { id: 3, start: 0.58, end: 0.78, fadeStart: 0.76, fadeEnd: 0.9, scaleStart: 1.44, scaleEnd: 1.07, x: 0.4, y: -0.6 },
-  { id: 4, start: 0.74, end: 0.94, fadeStart: 1, fadeEnd: 1, scaleStart: 1.06, scaleEnd: 1, x: 0, y: 0 },
+  { id: 1, start: 0.66, end: 0.78, fadeStart: 0.76, fadeEnd: 0.84, scaleStart: 6.2, scaleEnd: 2.7, x: -3.8, y: -1.2 },
+  { id: 2, start: 0.74, end: 0.86, fadeStart: 0.84, fadeEnd: 0.91, scaleStart: 3.1, scaleEnd: 1.55, x: 1.4, y: -0.9 },
+  { id: 3, start: 0.82, end: 0.93, fadeStart: 0.91, fadeEnd: 0.97, scaleStart: 1.62, scaleEnd: 1.09, x: 0.3, y: -0.3 },
+  { id: 4, start: 0.89, end: 1, fadeStart: 1, fadeEnd: 1, scaleStart: 1.08, scaleEnd: 1, x: 0, y: 0 },
+];
+
+const outroPanels = [
+  { sceneIndex: 0, xStart: -58, yStart: -48, xEnd: -36, yEnd: -32, rotate: -11.5, scaleStart: 1.06, scaleEnd: 1.2 },
+  { sceneIndex: 1, xStart: 54, yStart: -50, xEnd: 37, yEnd: -34, rotate: 13.5, scaleStart: 1.1, scaleEnd: 1.23 },
+  { sceneIndex: 2, xStart: -50, yStart: 50, xEnd: -39, yEnd: 36, rotate: 9.5, scaleStart: 1.02, scaleEnd: 1.18 },
+  { sceneIndex: 3, xStart: 58, yStart: 48, xEnd: 40, yEnd: 34, rotate: -9.5, scaleStart: 1.06, scaleEnd: 1.2 },
+  { sceneIndex: 4, xStart: 4, yStart: -58, xEnd: 2, yEnd: -42, rotate: 1.4, scaleStart: 1.1, scaleEnd: 1.26 },
 ];
 
 function clamp(value: number, min: number, max: number) {
@@ -221,12 +229,13 @@ function App() {
   const finalStart = (scenes.length - 2) / (scenes.length - 1);
   const finalTransition = clamp((progress - finalStart) / (1 - finalStart), 0, 1);
   const finalEase = smooth(finalTransition);
-  const finalCopyProgress = smooth(clamp((finalTransition - 0.78) / 0.18, 0, 1));
-  const finalButtonProgress = smooth(clamp((finalTransition - 0.9) / 0.1, 0, 1));
-  const finalWordProgress = smooth(clamp((finalTransition - 0.12) / 0.7, 0, 1));
-  const finalBrandVisible = finalTransition > 0.04;
+  const finalCopyProgress = smooth(clamp((finalTransition - 0.86) / 0.1, 0, 1));
+  const finalButtonProgress = smooth(clamp((finalTransition - 0.94) / 0.06, 0, 1));
+  const finalWordProgress = smooth(clamp((finalTransition - 0.88) / 0.12, 0, 1));
+  const finalBrandVisible = finalTransition > 0.64;
   const finalizing = finalTransition > 0.02;
   const stackVisible = finalTransition > 0.02 && finalTransition < 0.96;
+  const panelsVisible = finalTransition > 0.04 && finalTransition < 0.84;
   const showNotebook = finalTransition < 0.025;
   const contentIndex = finalTransition > 0.01 && finalTransition < 0.9 ? scenes.length - 2 : activeIndex;
   const contentScene = scenes[contentIndex];
@@ -303,7 +312,7 @@ function App() {
     "--final-copy-y": `${(1 - finalCopyProgress) * 18}px`,
     "--final-word-opacity": finalWordProgress,
     "--final-word-y": `${(1 - finalWordProgress) * 20}px`,
-    opacity: clamp((finalTransition - 0.04) / 0.18, 0, 1),
+    opacity: clamp((finalTransition - 0.64) / 0.12, 0, 1),
     pointerEvents: finalTransition > 0.9 ? "auto" : "none",
   } as React.CSSProperties;
 
@@ -388,18 +397,51 @@ function App() {
           )}
 
           {stackVisible && (
-            <div className="outro-stack" style={outroStackStyle} aria-hidden="true">
-              {scenes.slice(0, 5).map((item, index) => (
-                <section className={`outro-sheet outro-sheet--${index + 1}`} key={item.id}>
-                  <span className="outro-sheet__index">0{index + 1}</span>
-                  <div>
-                    <strong>{item.title}</strong>
-                    <small>{item.english}</small>
-                  </div>
-                  <SceneArt type={item.art} />
-                </section>
-              ))}
-            </div>
+            <>
+              {panelsVisible && (
+                <div className="outro-panels" aria-hidden="true">
+                  {outroPanels.map((panel, index) => {
+                    const item = scenes[panel.sceneIndex];
+                    const intro = smooth(clamp((finalTransition - 0.06) / 0.24, 0, 1));
+                    const exit = smooth(clamp((finalTransition - 0.66) / 0.16, 0, 1));
+                    const drift = smooth(clamp((finalTransition - 0.12) / 0.52, 0, 1));
+                    return (
+                      <section
+                        className={`outro-panel outro-panel--${index + 1}`}
+                        key={item.id}
+                        style={
+                          {
+                            "--panel-opacity": intro * (1 - exit),
+                            "--panel-transform": `translate3d(${mix(panel.xStart, panel.xEnd, drift)}vw, ${mix(
+                              panel.yStart,
+                              panel.yEnd,
+                              drift,
+                            )}vh, 0) rotate(${panel.rotate}deg) scale(${mix(panel.scaleStart, panel.scaleEnd, drift)})`,
+                          } as React.CSSProperties
+                        }
+                      >
+                        <span className="outro-panel__mark">0{panel.sceneIndex + 1}</span>
+                        <strong>{item.title}</strong>
+                        <small>{item.english}</small>
+                        <SceneArt type={item.art} />
+                      </section>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="outro-stack" style={outroStackStyle} aria-hidden="true">
+                {scenes.slice(0, 5).map((item, index) => (
+                  <section className={`outro-sheet outro-sheet--${index + 1}`} key={item.id}>
+                    <span className="outro-sheet__index">0{index + 1}</span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>{item.english}</small>
+                    </div>
+                    <SceneArt type={item.art} />
+                  </section>
+                ))}
+              </div>
+            </>
           )}
 
           {showNotebook && (
