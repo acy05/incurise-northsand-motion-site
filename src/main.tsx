@@ -202,6 +202,7 @@ function App() {
 
   const activeIndex = clamp(Math.round(progress * (scenes.length - 1)), 0, scenes.length - 1);
   const scene = scenes[activeIndex];
+  const isFinalScene = activeIndex === scenes.length - 1;
   const localProgress = progress * (scenes.length - 1) - activeIndex;
 
   const dateText = useMemo(() => formatDate(), []);
@@ -274,7 +275,7 @@ function App() {
       </header>
 
       <main ref={trackRef} className="scroll-track" style={{ minHeight: `${scenes.length * 100}vh` }}>
-        <section className="stage" style={stageStyle} aria-label="Incurise モーショントップ">
+        <section className={`stage ${isFinalScene ? "final-scene" : ""}`} style={stageStyle} aria-label="Incurise モーショントップ">
           <div className="ambient ambient--one" />
           <div className="ambient ambient--two" />
           <div className="left-rails" aria-hidden="true">
@@ -290,22 +291,40 @@ function App() {
 
           <Walker progress={progress} />
 
-          <article className="notebook" style={notebookStyle} aria-live="polite">
-            <div className="rings" aria-hidden="true">
-              {Array.from({ length: 8 }).map((_, index) => (
-                <span key={index} />
-              ))}
-            </div>
-            <div className="page page--copy">
-              <span className="page-kicker">SCENE {String(activeIndex + 1).padStart(2, "0")}</span>
-              <h1>{scene.title}</h1>
-              <p className="english">{scene.english}</p>
-              <p>{scene.body}</p>
-            </div>
-            <div className="page page--visual">
-              <SceneArt type={scene.art} />
-            </div>
-          </article>
+          {isFinalScene ? (
+            <article className="final-brand" aria-live="polite">
+              <div className="final-brand__ghost" aria-hidden="true">
+                INCURISE
+              </div>
+              <img className="final-brand__logo" src="/incurise-northsand-motion-site/incurise-logo.png" alt="Incurise Consulting" />
+              <h1 className="final-brand__title">Incurise Consulting</h1>
+              <div className="final-brand__copy">
+                <p>こうした小さな実装を、一つひとつ積み重ねていきます。</p>
+                <p>これからも、事業の成長に向き合いながら前に進みます。</p>
+              </div>
+              <button className="final-brand__button" type="button" onClick={() => setMenuOpen(true)}>
+                CONTACT
+                <span aria-hidden="true">→</span>
+              </button>
+            </article>
+          ) : (
+            <article className="notebook" style={notebookStyle} aria-live="polite">
+              <div className="rings" aria-hidden="true">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <span key={index} />
+                ))}
+              </div>
+              <div className="page page--copy">
+                <span className="page-kicker">SCENE {String(activeIndex + 1).padStart(2, "0")}</span>
+                <h1>{scene.title}</h1>
+                <p className="english">{scene.english}</p>
+                <p>{scene.body}</p>
+              </div>
+              <div className="page page--visual">
+                <SceneArt type={scene.art} />
+              </div>
+            </article>
+          )}
 
           <nav className="right-controller" aria-label="シーン操作">
             <button className="icon-button" type="button" aria-label="前のシーン" onClick={() => scrollToScene(activeIndex - 1)}>
@@ -339,10 +358,10 @@ function App() {
             ))}
           </nav>
 
-          <a className="join-us" href="https://incurise.co.jp/" target="_blank" rel="noreferrer">
+          <button className="join-us" type="button" onClick={() => scrollToScene(scenes.length - 1)}>
             <Plus size={20} />
             CONTACT
-          </a>
+          </button>
         </section>
       </main>
 
