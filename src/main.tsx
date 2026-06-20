@@ -94,6 +94,10 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
 
+function smooth(value: number) {
+  return value * value * (3 - 2 * value);
+}
+
 function formatDate() {
   return new Intl.DateTimeFormat("ja-JP", {
     year: "numeric",
@@ -203,6 +207,16 @@ function App() {
   const activeIndex = clamp(Math.round(progress * (scenes.length - 1)), 0, scenes.length - 1);
   const scene = scenes[activeIndex];
   const isFinalScene = activeIndex === scenes.length - 1;
+  const finalStart = (scenes.length - 2) / (scenes.length - 1);
+  const finalTransition = clamp((progress - finalStart) / (1 - finalStart), 0, 1);
+  const finalEase = smooth(finalTransition);
+  const finalCopyProgress = clamp((finalTransition - 0.54) / 0.36, 0, 1);
+  const finalBrandVisible = finalTransition > 0.02;
+  const finalizing = finalTransition > 0.02;
+  const notebookExit = clamp((finalTransition - 0.08) / 0.58, 0, 1);
+  const showNotebook = finalTransition < 0.78;
+  const contentIndex = finalTransition > 0.01 && finalTransition < 0.9 ? scenes.length - 2 : activeIndex;
+  const contentScene = scenes[contentIndex];
   const localProgress = progress * (scenes.length - 1) - activeIndex;
 
   const dateText = useMemo(() => formatDate(), []);
@@ -244,13 +258,27 @@ function App() {
     "--scene-count": scenes.length,
     "--scene-index": activeIndex,
     "--progress": progress,
+    "--final-progress": finalEase,
+    "--final-side-opacity": 1 - finalEase,
   } as React.CSSProperties;
 
   const notebookStyle = {
-    transform: `translate3d(${Math.sin(progress * Math.PI) * 2.2}vw, ${Math.cos(progress * Math.PI * 1.4) * 1.8}vh, 0) rotate(${
-      -8 + progress * 12 + localProgress * 2
-    }deg)`,
-  };
+    opacity: 1 - notebookExit,
+    pointerEvents: notebookExit > 0.9 ? "none" : "auto",
+    transform: `translate3d(${Math.sin(progress * Math.PI) * 2.2 - notebookExit * 30}vw, ${
+      Math.cos(progress * Math.PI * 1.4) * 1.8 + notebookExit * 9
+    }vh, 0) rotate(${-8 + progress * 12 + localProgress * 2 - notebookExit * 10}deg) scale(${1 - notebookExit * 0.14})`,
+  } as React.CSSProperties;
+
+  const finalBrandStyle = {
+    "--final-copy-opacity": finalCopyProgress,
+    "--final-copy-y": `${(1 - finalCopyProgress) * 18}px`,
+    "--final-ghost-opacity": 0.08 + finalEase * 0.08,
+    "--final-logo-scale": 0.72 + finalEase * 0.28,
+    opacity: clamp((finalTransition - 0.02) / 0.22, 0, 1),
+    pointerEvents: finalTransition > 0.72 ? "auto" : "none",
+    transform: `translate3d(0, ${(1 - finalEase) * 32}vh, 0) scale(${0.82 + finalEase * 0.18})`,
+  } as React.CSSProperties;
 
   return (
     <>
@@ -275,7 +303,11 @@ function App() {
       </header>
 
       <main ref={trackRef} className="scroll-track" style={{ minHeight: `${scenes.length * 100}vh` }}>
-        <section className={`stage ${isFinalScene ? "final-scene" : ""}`} style={stageStyle} aria-label="Incurise モーショントップ">
+        <section
+          className={`stage ${isFinalScene ? "final-scene" : ""} ${finalizing ? "finalizing" : ""}`}
+          style={stageStyle}
+          aria-label="Incurise モーショントップ"
+        >
           <div className="ambient ambient--one" />
           <div className="ambient ambient--two" />
           <div className="left-rails" aria-hidden="true">
@@ -291,8 +323,8 @@ function App() {
 
           <Walker progress={progress} />
 
-          {isFinalScene ? (
-            <article className="final-brand" aria-live="polite">
+          {finalBrandVisible && (
+            <article className="final-brand" style={finalBrandStyle} aria-live="polite">
               <div className="final-brand__ghost" aria-hidden="true">
                 INCURISE
               </div>
@@ -307,7 +339,9 @@ function App() {
                 <span aria-hidden="true">→</span>
               </button>
             </article>
-          ) : (
+          )}
+
+          {showNotebook && (
             <article className="notebook" style={notebookStyle} aria-live="polite">
               <div className="rings" aria-hidden="true">
                 {Array.from({ length: 8 }).map((_, index) => (
@@ -315,13 +349,13 @@ function App() {
                 ))}
               </div>
               <div className="page page--copy">
-                <span className="page-kicker">SCENE {String(activeIndex + 1).padStart(2, "0")}</span>
-                <h1>{scene.title}</h1>
-                <p className="english">{scene.english}</p>
-                <p>{scene.body}</p>
+                <span className="page-kicker">SCENE {String(contentIndex + 1).padStart(2, "0")}</span>
+                <h1>{contentScene.title}</h1>
+                <p className="english">{contentScene.english}</p>
+                <p>{contentScene.body}</p>
               </div>
               <div className="page page--visual">
-                <SceneArt type={scene.art} />
+                <SceneArt type={contentScene.art} />
               </div>
             </article>
           )}
