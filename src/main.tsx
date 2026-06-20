@@ -90,6 +90,30 @@ const scenes: Scene[] = [
   },
 ];
 
+const paperPieces = Array.from({ length: 54 }, (_, index) => {
+  const col = index % 9;
+  const row = Math.floor(index / 9);
+  const side = index % 4;
+  const startX = side === 0 ? -50 - col * 5 : side === 1 ? 112 + col * 7 : 8 + col * 13;
+  const startY = side === 2 ? -42 - row * 8 : side === 3 ? 92 + row * 10 : 8 + row * 12;
+  const endX = 8 + col * 10.5 + (row % 2) * 2.4;
+  const endY = 18 + row * 9.6 + (col % 3) * 1.8;
+
+  return {
+    id: index,
+    startX,
+    startY,
+    endX,
+    endY,
+    startRot: -58 + ((index * 31) % 116),
+    endRot: -9 + ((index * 13) % 18),
+    width: 34 + ((index * 7) % 26),
+    height: 22 + ((index * 11) % 19),
+    delay: (index % 12) * 0.018,
+    accent: ["#f36f21", "#44b4a3", "#ff5f57", "#8e5cf7", "#f7b733"][index % 5],
+  };
+});
+
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
 }
@@ -210,7 +234,9 @@ function App() {
   const finalStart = (scenes.length - 2) / (scenes.length - 1);
   const finalTransition = clamp((progress - finalStart) / (1 - finalStart), 0, 1);
   const finalEase = smooth(finalTransition);
-  const finalCopyProgress = clamp((finalTransition - 0.54) / 0.36, 0, 1);
+  const finalCopyProgress = smooth(clamp((finalTransition - 0.66) / 0.28, 0, 1));
+  const finalWordProgress = smooth(clamp((finalTransition - 0.26) / 0.54, 0, 1));
+  const paperFade = 1 - smooth(clamp((finalTransition - 0.78) / 0.2, 0, 1));
   const finalBrandVisible = finalTransition > 0.02;
   const finalizing = finalTransition > 0.02;
   const notebookExit = clamp((finalTransition - 0.08) / 0.58, 0, 1);
@@ -273,8 +299,10 @@ function App() {
   const finalBrandStyle = {
     "--final-copy-opacity": finalCopyProgress,
     "--final-copy-y": `${(1 - finalCopyProgress) * 18}px`,
-    "--final-ghost-opacity": 0.08 + finalEase * 0.08,
-    "--final-logo-scale": 0.72 + finalEase * 0.28,
+    "--final-word-opacity": 0.12 + finalWordProgress * 0.88,
+    "--final-word-y": `${(1 - finalWordProgress) * 20}px`,
+    "--final-word-scale": 0.9 + finalWordProgress * 0.1,
+    "--paper-fade": paperFade,
     opacity: clamp((finalTransition - 0.02) / 0.22, 0, 1),
     pointerEvents: finalTransition > 0.72 ? "auto" : "none",
     transform: `translate3d(0, ${(1 - finalEase) * 32}vh, 0) scale(${0.82 + finalEase * 0.18})`,
@@ -325,10 +353,38 @@ function App() {
 
           {finalBrandVisible && (
             <article className="final-brand" style={finalBrandStyle} aria-live="polite">
-              <div className="final-brand__ghost" aria-hidden="true">
+              <div className="paper-swarm" aria-hidden="true">
+                {paperPieces.map((piece) => {
+                  const settle = smooth(clamp((finalTransition - piece.delay) / 0.66, 0, 1));
+                  const x = piece.startX + (piece.endX - piece.startX) * settle;
+                  const y = piece.startY + (piece.endY - piece.startY) * settle;
+                  const rotate = piece.startRot + (piece.endRot - piece.startRot) * settle;
+                  const scale = 0.82 + settle * 0.18;
+                  const opacity = clamp((finalTransition - 0.04) / 0.16, 0, 1) * paperFade;
+
+                  return (
+                    <span
+                      className="paper-piece"
+                      key={piece.id}
+                      style={
+                        {
+                          "--paper-x": `${x}%`,
+                          "--paper-y": `${y}%`,
+                          "--paper-rotate": `${rotate}deg`,
+                          "--paper-scale": scale,
+                          "--paper-opacity": opacity,
+                          "--paper-width": `${piece.width}px`,
+                          "--paper-height": `${piece.height}px`,
+                          "--paper-accent": piece.accent,
+                        } as React.CSSProperties
+                      }
+                    />
+                  );
+                })}
+              </div>
+              <div className="final-word" aria-hidden="true">
                 INCURISE
               </div>
-              <img className="final-brand__logo" src="/incurise-northsand-motion-site/incurise-logo.png" alt="Incurise Consulting" />
               <h1 className="final-brand__title">Incurise Consulting</h1>
               <div className="final-brand__copy">
                 <p>こうした小さな実装を、一つひとつ積み重ねていきます。</p>

@@ -643,33 +643,89 @@ h1 {
   will-change: opacity, transform;
 }
 
-.final-brand__ghost {
+.paper-swarm {
   position: absolute;
-  top: 42%;
-  left: 50%;
-  width: max-content;
-  max-width: 92vw;
-  transform: translate(-50%, -50%);
-  color: rgba(21, 21, 21, 0.075);
-  opacity: var(--final-ghost-opacity);
-  font-size: clamp(5rem, 13vw, 15rem);
-  font-weight: 950;
-  letter-spacing: 0.06em;
-  line-height: 0.82;
-  text-transform: uppercase;
-  -webkit-text-stroke: 1px rgba(21, 21, 21, 0.08);
+  inset: -18% -10% 26%;
   pointer-events: none;
+  opacity: var(--paper-fade);
+  overflow: visible;
 }
 
-.final-brand__logo {
-  position: relative;
-  width: min(34vw, 420px);
-  min-width: 240px;
-  height: auto;
-  filter: drop-shadow(0 24px 34px rgba(255, 68, 48, 0.18));
-  transform: scale(var(--final-logo-scale));
+.paper-piece {
+  position: absolute;
+  left: var(--paper-x);
+  top: var(--paper-y);
+  width: var(--paper-width);
+  height: var(--paper-height);
+  border: 1px solid rgba(21, 21, 21, 0.28);
+  background:
+    linear-gradient(90deg, transparent 0 68%, var(--paper-accent) 68% 74%, transparent 74%),
+    repeating-linear-gradient(0deg, rgba(21, 21, 21, 0.18) 0 1px, transparent 1px 7px),
+    #fffdf6;
+  box-shadow: 5px 8px 0 rgba(21, 21, 21, 0.08);
+  opacity: var(--paper-opacity);
+  transform: translate3d(-50%, -50%, 0) rotate(var(--paper-rotate)) scale(var(--paper-scale));
   transform-origin: center center;
-  will-change: transform;
+  will-change: opacity, transform;
+}
+
+.paper-piece::before,
+.paper-piece::after {
+  content: "";
+  position: absolute;
+  background: rgba(21, 21, 21, 0.35);
+  border-radius: 999px;
+}
+
+.paper-piece::before {
+  top: 20%;
+  left: 14%;
+  width: 42%;
+  height: 2px;
+}
+
+.paper-piece::after {
+  top: 48%;
+  left: 14%;
+  width: 62%;
+  height: 2px;
+}
+
+.final-word {
+  position: absolute;
+  top: 34%;
+  left: 50%;
+  width: max-content;
+  max-width: 96vw;
+  transform: translate(-50%, calc(-50% + var(--final-word-y))) scale(var(--final-word-scale));
+  color: transparent;
+  opacity: var(--final-word-opacity);
+  background:
+    radial-gradient(circle at 12% 22%, rgba(243, 111, 33, 0.5) 0 2px, transparent 2px 8px),
+    radial-gradient(circle at 76% 38%, rgba(68, 180, 163, 0.55) 0 2px, transparent 2px 10px),
+    radial-gradient(circle at 48% 76%, rgba(255, 95, 87, 0.5) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(108deg, rgba(21, 21, 21, 0.18) 0 1px, transparent 1px 9px),
+    repeating-linear-gradient(17deg, rgba(21, 21, 21, 0.08) 0 1px, transparent 1px 7px),
+    #d8d2c6;
+  background-size:
+    31px 27px,
+    37px 33px,
+    29px 31px,
+    26px 26px,
+    18px 18px,
+    auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  font-size: clamp(6.6rem, 15vw, 16.2rem);
+  font-weight: 950;
+  letter-spacing: 0.02em;
+  line-height: 0.76;
+  text-transform: uppercase;
+  -webkit-text-stroke: 1px rgba(21, 21, 21, 0.07);
+  filter: drop-shadow(0 10px 0 rgba(21, 21, 21, 0.04));
+  pointer-events: none;
+  transform-origin: center center;
+  will-change: opacity, transform;
 }
 
 .final-brand__title {
@@ -835,17 +891,6 @@ h1 {
   }
 }
 
-@keyframes final-logo-rise {
-  from {
-    opacity: 0;
-    transform: translateY(24px) scale(0.94);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
 @keyframes walk-bob {
   from {
     transform: translateY(0) rotate(-1deg);
@@ -949,13 +994,13 @@ h1 {
     inset: 92px 66px 176px;
   }
 
-  .final-brand__logo {
-    width: min(52vw, 360px);
+  .final-word {
+    top: 39%;
+    font-size: clamp(4.6rem, 16vw, 9.2rem);
   }
 
-  .final-brand__ghost {
-    top: 39%;
-    font-size: clamp(4.4rem, 16vw, 8.5rem);
+  .paper-swarm {
+    inset: -16% -8% 28%;
   }
 }
 
@@ -1081,16 +1126,15 @@ h1 {
     inset: 112px 24px 178px 54px;
   }
 
-  .final-brand__ghost {
+  .final-word {
     top: 40%;
     left: 53%;
-    font-size: clamp(3.2rem, 18vw, 5.2rem);
-    letter-spacing: 0.02em;
+    font-size: clamp(3.1rem, 16vw, 5.2rem);
+    letter-spacing: 0;
   }
 
-  .final-brand__logo {
-    width: min(74vw, 300px);
-    min-width: 0;
+  .paper-swarm {
+    inset: 2% -18% 24%;
   }
 
   .final-brand__copy {
