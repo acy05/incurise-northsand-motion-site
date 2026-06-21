@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { ArrowDown, ArrowUp, Menu, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, X } from "lucide-react";
 import "./styles.css";
 
 type Scene = {
@@ -53,8 +53,8 @@ const scenes: Scene[] = [
     art: "bridge",
   },
   {
-    id: "works",
-    nav: "WORKS",
+    id: "recruit",
+    nav: "RECRUIT",
     title: "成果物は、公開後の改善まで含めて考える。",
     english: "Launch is the start line.",
     body:
@@ -65,8 +65,8 @@ const scenes: Scene[] = [
     art: "shield",
   },
   {
-    id: "recruit",
-    nav: "RECRUIT",
+    id: "ir",
+    nav: "IR",
     title: "一緒に、作れる人を増やす。",
     english: "Grow builders together.",
     body:
@@ -77,8 +77,8 @@ const scenes: Scene[] = [
     art: "people",
   },
   {
-    id: "contact",
-    nav: "CONTACT",
+    id: "news",
+    nav: "NEWS",
     title: "相談を、次の実験に変える。",
     english: "Turn the question into a test.",
     body:
@@ -125,13 +125,12 @@ function mix(start: number, end: number, amount: number) {
 }
 
 function formatDate() {
-  return new Intl.DateTimeFormat("ja-JP", {
+  return `[${new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
     year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  })
-    .format(new Date())
-    .replaceAll("/", ".");
+    month: "long",
+    day: "numeric",
+  }).format(new Date())}]`;
 }
 
 function SceneArt({ type }: { type: Scene["art"] }) {
@@ -520,8 +519,8 @@ function App() {
 
   const notebookStyle = {
     opacity: 1,
-    transform: `translate3d(${Math.sin(progress * Math.PI) * 2.2}vw, ${Math.cos(progress * Math.PI * 1.4) * 1.8}vh, 0) rotate(${
-      -8 + progress * 12 + localProgress * 2
+    transform: `translate3d(${Math.sin(progress * Math.PI) * 1.2}vw, ${Math.cos(progress * Math.PI * 1.4) * 0.8}vh, 0) rotate(${
+      4.5 + localProgress * 1.2
     }deg)`,
   } as React.CSSProperties;
 
@@ -547,21 +546,26 @@ function App() {
     <>
       <header className="site-header">
         <button className="brand" type="button" onClick={() => scrollToScene(0)} aria-label="最初のシーンへ">
-          <span className="brand-mark">I</span>
           <span className="brand-text">INCURISE</span>
         </button>
-        <div className="header-center" aria-label="本日の表示">
-          <span>{dateText}</span>
-          <span>INTERACTIVE HOME</span>
-        </div>
+        <div className="header-date" aria-label="本日の表示">{dateText}</div>
         <button
-          className="icon-button menu-trigger"
+          className="menu-trigger"
           type="button"
           aria-label={menuOpen ? "メニューを閉じる" : "メニューを開く"}
           aria-expanded={menuOpen}
           onClick={() => setMenuOpen((open) => !open)}
         >
-          {menuOpen ? <X size={22} /> : <Menu size={22} />}
+          <span className="menu-word">{menuOpen ? "CLOSE" : "MENU"}</span>
+          {menuOpen ? (
+            <X className="menu-close-icon" size={22} />
+          ) : (
+            <span className="menu-coil" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          )}
         </button>
       </header>
 
@@ -614,8 +618,8 @@ function App() {
                 <p>こうした小さな実装を、一つひとつ積み重ねていきます。</p>
                 <p>これからも、事業の成長に向き合いながら前に進みます。</p>
               </div>
-              <button className="final-brand__button" type="button" onClick={() => setMenuOpen(true)}>
-                CONTACT
+              <button className="final-brand__button" type="button" onClick={() => scrollToScene(1)}>
+                PHILOSOPHY
                 <span aria-hidden="true">→</span>
               </button>
             </article>
@@ -671,35 +675,28 @@ function App() {
 
           {showNotebook && (
             <article className="notebook" style={notebookStyle} aria-live="polite">
-              <div className="rings" aria-hidden="true">
-                {Array.from({ length: 8 }).map((_, index) => (
-                  <span key={index} />
-                ))}
-              </div>
-              <div className="page page--copy">
-                <span className="page-kicker">SCENE {String(contentIndex + 1).padStart(2, "0")}</span>
+              <div className="paper-face">
+                <span className="page-kicker">BRAND STORY 0{contentIndex + 1}</span>
                 <h1>{contentScene.title}</h1>
                 <p className="english">{contentScene.english}</p>
-                <p>{contentScene.body}</p>
-              </div>
-              <div className="page page--visual">
                 <SceneArt type={contentScene.art} />
+                <p>{contentScene.body}</p>
               </div>
             </article>
           )}
 
           <nav className="right-controller" aria-label="シーン操作">
-            <button className="icon-button" type="button" aria-label="前のシーン" onClick={() => scrollToScene(activeIndex - 1)}>
-              <ArrowUp size={20} />
-            </button>
+            <span className="controller-label">SCROLL</span>
             <div className="controller-track" aria-hidden="true">
               <span style={{ height: `${8 + progress * 92}%` }} />
             </div>
-            <span className="controller-count">
-              {activeIndex + 1}/{scenes.length}
-            </span>
-            <button className="icon-button" type="button" aria-label="次のシーン" onClick={() => scrollToScene(activeIndex + 1)}>
-              <ArrowDown size={20} />
+            <span className="controller-current">{activeIndex + 1}</span>
+            <span className="controller-total">{scenes.length}</span>
+            <button className="controller-button controller-button--prev" type="button" aria-label="前のシーン" onClick={() => scrollToScene(activeIndex - 1)}>
+              <ArrowUp size={13} />
+            </button>
+            <button className="controller-button controller-button--next" type="button" aria-label="次のシーン" onClick={() => scrollToScene(activeIndex + 1)}>
+              <ArrowDown size={13} />
             </button>
           </nav>
 
@@ -722,7 +719,7 @@ function App() {
 
           <button className="join-us" type="button" onClick={() => scrollToScene(scenes.length - 1)}>
             <Plus size={20} />
-            CONTACT
+            JOIN US
           </button>
         </section>
       </main>
