@@ -225,6 +225,88 @@ function Walker({ progress }: { progress: number }) {
   );
 }
 
+function drawWordTexture(canvas: HTMLCanvasElement, seedOffset: number) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const width = canvas.width;
+  const height = canvas.height;
+  let seed = (0x6d2b79f5 + seedOffset * 1013904223) >>> 0;
+  const random = () => {
+    seed = (seed * 1664525 + 1013904223) >>> 0;
+    return seed / 4294967296;
+  };
+
+  ctx.clearRect(0, 0, width, height);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = '900 250px "Arial Black", "Helvetica Neue", Arial, sans-serif';
+  ctx.fillStyle = "#fff";
+  ctx.fillText("INCURISE", width / 2, height / 2 + 8);
+
+  ctx.globalCompositeOperation = "source-in";
+  ctx.fillStyle = "#e2dfd6";
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.globalCompositeOperation = "source-atop";
+  for (let i = 0; i < 21000; i += 1) {
+    const tone = Math.floor(110 + random() * 92);
+    const alpha = 0.18 + random() * 0.38;
+    const size = random() > 0.82 ? 2 : 1;
+    ctx.fillStyle = `rgba(${tone}, ${tone}, ${tone}, ${alpha})`;
+    ctx.fillRect(random() * width, random() * height, size, size);
+  }
+
+  const accentColors = ["#f36f21", "#44b4a3", "#ff5f57", "#8c9994"];
+  for (let i = 0; i < 760; i += 1) {
+    const color = accentColors[Math.floor(random() * accentColors.length)];
+    ctx.save();
+    ctx.translate(random() * width, random() * height);
+    ctx.rotate(random() * Math.PI);
+    ctx.globalAlpha = 0.12 + random() * 0.2;
+    ctx.fillStyle = color;
+    ctx.fillRect(-2, -1, 4 + random() * 10, 2);
+    ctx.restore();
+  }
+
+  ctx.globalCompositeOperation = "destination-out";
+  for (let i = 0; i < 3600; i += 1) {
+    ctx.globalAlpha = 0.05 + random() * 0.08;
+    ctx.fillRect(random() * width, random() * height, 1 + random() * 2, 1 + random() * 2);
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.globalCompositeOperation = "source-over";
+}
+
+function TextureWord({ frameId, style }: { frameId: number; style: React.CSSProperties }) {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    let cancelled = false;
+    const draw = () => {
+      if (!cancelled) {
+        drawWordTexture(canvas, frameId);
+      }
+    };
+
+    if (document.fonts?.ready) {
+      document.fonts.ready.then(draw);
+    } else {
+      draw();
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [frameId]);
+
+  return <canvas ref={canvasRef} className={`zoom-word zoom-word--${frameId}`} width="2200" height="320" style={style} aria-hidden="true" />;
+}
+
 function App() {
   const trackRef = useRef<HTMLElement | null>(null);
   const rawFinalTransitionRef = useRef(0);
@@ -512,8 +594,8 @@ function App() {
                   const leave = frame.fadeStart >= 1 ? 0 : smooth(clamp((finalTransition - frame.fadeStart) / (frame.fadeEnd - frame.fadeStart), 0, 1));
                   const frameProgress = smooth(clamp((finalTransition - frame.start) / (frame.end - frame.start), 0, 1));
                   return (
-                    <span
-                      className={`zoom-word zoom-word--${frame.id}`}
+                    <TextureWord
+                      frameId={frame.id}
                       key={frame.id}
                       style={
                         {
@@ -523,9 +605,7 @@ function App() {
                           "--zoom-y": `${mix(frame.y, 0, frameProgress)}vh`,
                         } as React.CSSProperties
                       }
-                    >
-                      INCURISE
-                    </span>
+                    />
                   );
                 })}
               </div>
