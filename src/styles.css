@@ -1045,6 +1045,34 @@ h1 {
   outline-offset: 6px;
 }
 
+@media (max-height: 760px) and (min-width: 681px) {
+  .menu-panel {
+    padding: 62px 7vw 24px;
+  }
+
+  .menu-panel__inner {
+    width: min(1040px, 92%);
+  }
+
+  .menu-label {
+    margin-bottom: 8px;
+  }
+
+  .menu-panel nav {
+    gap: 4px;
+  }
+
+  .menu-panel button {
+    min-height: clamp(54px, 8.4vh, 68px);
+    padding: 6px 0;
+  }
+
+  .menu-panel button span {
+    font-size: clamp(2rem, 5.4vw, 4.4rem);
+    line-height: 0.86;
+  }
+}
+
 @keyframes floor-glide {
   to {
     background-position:

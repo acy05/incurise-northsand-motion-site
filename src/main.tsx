@@ -107,6 +107,10 @@ const outroPanels = [
 
 const OUTRO_FORWARD_DURATION_MS = 4800;
 const OUTRO_REVERSE_DURATION_MS = 1400;
+const WHEEL_THRESHOLD = 50;
+const SCENE_SCROLL_LOCK_MS = 1600;
+const OUTRO_SCROLL_LOCK_MS = 2800;
+const WHEEL_RESET_MS = 500;
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -225,6 +229,14 @@ function App() {
   const trackRef = useRef<HTMLElement | null>(null);
   const rawFinalTransitionRef = useRef(0);
   const displayFinalTransitionRef = useRef(0);
+  const currentSceneRef = useRef(0);
+  const wheelEnabledRef = useRef(true);
+  const wheelAmountRef = useRef(0);
+  const wheelVectorRef = useRef(1);
+  const wheelResetTimeoutRef = useRef<number | null>(null);
+  const wheelLockTimeoutRef = useRef<number | null>(null);
+  const touchScreenYRef = useRef<number | null>(null);
+  const menuOpenRef = useRef(false);
   const [progress, setProgress] = useState(0);
   const [displayFinalTransition, setDisplayFinalTransition] = useState(0);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -276,6 +288,7 @@ function App() {
   }, [updateProgress]);
 
   useEffect(() => {
+    menuOpenRef.current = menuOpen;
     document.body.classList.toggle("menu-open", menuOpen);
   }, [menuOpen]);
 
@@ -319,6 +332,98 @@ function App() {
     const target = track.offsetTop + (height * clamp(index, 0, scenes.length - 1)) / (scenes.length - 1);
     window.scrollTo({ top: target, behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    currentSceneRef.current = activeIndex;
+  }, [activeIndex]);
+
+  const moveSceneByStep = useCallback(
+    (moveValue: number) => {
+      const previousIndex = currentSceneRef.current;
+      const nextIndex = clamp(previousIndex + moveValue, 0, scenes.length - 1);
+      if (nextIndex === previousIndex) return;
+
+      currentSceneRef.current = nextIndex;
+      scrollToScene(nextIndex);
+
+      wheelEnabledRef.current = false;
+      if (wheelLockTimeoutRef.current) {
+        window.clearTimeout(wheelLockTimeoutRef.current);
+      }
+      const lockDuration = nextIndex === scenes.length - 1 || previousIndex === scenes.length - 1 ? OUTRO_SCROLL_LOCK_MS : SCENE_SCROLL_LOCK_MS;
+      wheelLockTimeoutRef.current = window.setTimeout(() => {
+        wheelEnabledRef.current = true;
+        wheelAmountRef.current = 0;
+      }, lockDuration);
+    },
+    [scrollToScene],
+  );
+
+  useEffect(() => {
+    const updateWheelAmount = (deltaY: number) => {
+      if (!wheelEnabledRef.current || Math.abs(deltaY) < 1) return;
+
+      const nextVector = deltaY > 0 ? 1 : -1;
+      if (wheelVectorRef.current !== nextVector) {
+        wheelAmountRef.current = 0;
+      }
+      wheelVectorRef.current = nextVector;
+
+      if (wheelResetTimeoutRef.current) {
+        window.clearTimeout(wheelResetTimeoutRef.current);
+      }
+      wheelResetTimeoutRef.current = window.setTimeout(() => {
+        wheelAmountRef.current = 0;
+      }, WHEEL_RESET_MS);
+
+      wheelAmountRef.current += deltaY;
+      if (wheelAmountRef.current > WHEEL_THRESHOLD) {
+        moveSceneByStep(1);
+      } else if (wheelAmountRef.current < -WHEEL_THRESHOLD) {
+        moveSceneByStep(-1);
+      }
+    };
+
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      if (menuOpenRef.current) return;
+      updateWheelAmount(event.deltaY);
+    };
+
+    const onTouchStart = (event: TouchEvent) => {
+      touchScreenYRef.current = event.touches[0]?.screenY ?? null;
+    };
+
+    const onTouchMove = (event: TouchEvent) => {
+      if (menuOpenRef.current) {
+        event.preventDefault();
+        return;
+      }
+      const previousY = touchScreenYRef.current;
+      const currentY = event.touches[0]?.screenY ?? null;
+      if (previousY === null || currentY === null) return;
+
+      event.preventDefault();
+      touchScreenYRef.current = currentY;
+      updateWheelAmount((previousY - currentY) * 10);
+    };
+
+    document.body.addEventListener("wheel", onWheel, { passive: false });
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      document.body.removeEventListener("wheel", onWheel);
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+      if (wheelResetTimeoutRef.current) {
+        window.clearTimeout(wheelResetTimeoutRef.current);
+      }
+      if (wheelLockTimeoutRef.current) {
+        window.clearTimeout(wheelLockTimeoutRef.current);
+      }
+    };
+  }, [moveSceneByStep]);
 
   const stageStyle = {
     "--accent": scene.accent,
